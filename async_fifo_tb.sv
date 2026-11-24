@@ -151,6 +151,33 @@ module testbench;
         $display("[ERROR] Simulation Timeout!");
         $finish;
    end
+  property p_no_write_when_full;
+    @(posedge wclk) disable iff (!intf.wrst_n)
+    (intf.winc && intf.wfull) |=> $stable(u_dut.wbin);
+  endproperty
+  assert property (p_no_write_when_full)
+    else $error("[SVA FAIL] Write pointer incremented while FIFO was full");
+    
+    property p_no_read_when_empty;
+      @(posedge rclk) disable iff (!intf.rrst_n)
+      (intf.rinc && intf.rempty) |=> $stable(u_dut.rbin);
+    endproperty
+    assert property (p_no_read_when_empty)
+      else $error("[SVA FAIL] Read pointer incremented while FIFO was empty");
+      
+      property p_never_full_and_empty;
+        @(posedge wclk) disable iff (!intf.wrst_n || !intf.rrst_n)
+        !(intf.wfull && intf.rempty);
+      endproperty
+      assert property (p_never_full_and_empty)
+        else $error("[SVA FAIL] Illegal state: FIFO is both full and empty");
+        
+        property p_reset_wfull;
+          @(posedge wclk)
+          (!intf.wrst_n) -> (intf.wfull == 1'b0);
+        endproperty
+        assert property (p_reset_wfull)
+          else $error("[SVA FAIL] wfull not 0 when reset");  
 endmodule
 
     
